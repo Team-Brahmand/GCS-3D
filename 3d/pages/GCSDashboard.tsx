@@ -85,7 +85,6 @@ const GCSDashboard: React.FC = () => {
   // Simulate sensor updates every second
   useEffect(() => {
     const interval = setInterval(() => {
-      // Update sensor values (simulate sensor data)
       setAltitude((prev) => Math.max(0, prev - 5 + (Math.random() - 0.5) * 10));
       setTemperature((prev) => prev + (Math.random() - 0.5));
       setPressure((prev) => 1013 + (Math.random() - 0.5) * 5);
@@ -107,7 +106,6 @@ const GCSDashboard: React.FC = () => {
       }));
       setAirQuality((prev) => Math.max(0, prev + (Math.random() - 0.5) * 2));
 
-      // Update telemetry history (keep last 20 data points)
       setChartData((prevData) => [
         ...prevData.slice(-19),
         {
@@ -119,7 +117,6 @@ const GCSDashboard: React.FC = () => {
         },
       ]);
 
-      // Calculate relative location (approximate conversion: degrees to meters)
       setRelativeLocation({
         x: (gnssLng - LAUNCH_LNG) * 111320,
         y: altitude - LAUNCH_ALT,
@@ -165,8 +162,8 @@ const GCSDashboard: React.FC = () => {
         </div>
       </header>
 
-      {/* Grid Layout: 2 columns × 3 rows */}
-      <div className="grid grid-cols-2 grid-rows-3 gap-2 h-[calc(100%-2.5rem)]">
+      {/* Modified Grid Layout: 2 columns with auto-sized rows */}
+      <div className="grid grid-cols-2 gap-1 auto-rows-auto">
         {/* SENSOR READOUTS (Row 1, Col 1) */}
         <div className="overflow-auto p-1">
           <Card>
@@ -251,7 +248,6 @@ const GCSDashboard: React.FC = () => {
               <CardTitle>Telemetry Charts</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Toggle for third metric */}
               <div className="flex justify-end mb-2 space-x-2">
                 <Button
                   size="sm"
@@ -356,9 +352,7 @@ const GCSDashboard: React.FC = () => {
                       <Line
                         type="monotone"
                         dataKey={thirdMetric}
-                        stroke={
-                          thirdMetric === "humidity" ? "#ffc658" : "#ff7300"
-                        }
+                        stroke={thirdMetric === "humidity" ? "#ffc658" : "#ff7300"}
                         strokeWidth={2}
                         dot={false}
                       />
@@ -370,7 +364,7 @@ const GCSDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* 3D SIMULATION OF THE CANSAT (Row 2, Col 1) */}
+        {/* 3D SIMULATION (Row 2, Col 1) */}
         <div className="overflow-auto p-1">
           <Card>
             <CardHeader>
@@ -381,6 +375,7 @@ const GCSDashboard: React.FC = () => {
                 <ambientLight intensity={0.5} />
                 <pointLight position={[10, 10, 10]} />
                 <OrbitControls />
+                {/* Only show orientation; position fixed at origin */}
                 <CanSat
                   position={[0, 0, 0]}
                   rotation={[
@@ -404,26 +399,26 @@ const GCSDashboard: React.FC = () => {
             <CardContent>
               <PositionGraph
                 position={{
-                  x: relativeLocation.x / 100000, // adjust scale as needed
-                  y: relativeLocation.y / 100, // adjust scale as needed
+                  x: relativeLocation.x / 100000,
+                  y: relativeLocation.y / 100,
                   z: relativeLocation.z / 100000,
                 }}
               />
             </CardContent>
           </Card>
         </div>
+      </div>
 
-        {/* TERMINAL (Row 3, spanning both columns) */}
-        <div className="col-span-2 overflow-auto p-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Terminal</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Terminal onSendCommand={handleSendCommand} />
-            </CardContent>
-          </Card>
-        </div>
+      {/* Terminal Section (spanning full width) */}
+      <div className="mt-1">
+        <Card>
+          <CardHeader>
+            <CardTitle>Terminal</CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-auto p-1">
+            <Terminal onSendCommand={handleSendCommand} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
