@@ -5,7 +5,6 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import Terminal from "@/components/Terminal";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
@@ -26,11 +25,41 @@ const LAUNCH_LAT = 28.6139;
 const LAUNCH_LNG = 77.209;
 const LAUNCH_ALT = 1000;
 
+// Define the TypeScript interface for the API response
+interface TelemetryData {
+  timestamp: number;
+  altitude: number;
+  temperature: number;
+  pressure: number;
+  humidity: number;
+  battery: number;
+  gnss: { lat: number; lng: number };
+  gyro: { pitch: number; yaw: number; roll: number };
+  acceleration: { x: number; y: number; z: number };
+  airQuality: number;
+  sensor_status: {
+    gnss: string;
+    altimetry: string;
+    pressure: string;
+    temperature: string;
+    gyro: string;
+    power: string;
+    airQuality: string;
+  };
+  system_state: number;
+};
+
+const getColorForStatus = (status: string) => {
+  if (status === "ACTIVE") return "green";
+  if (status === "ERROR") return "red";
+  if (status === "STANDBY") return "blue";
+  return "gray";
+};
+
 const GCSDashboard: React.FC = () => {
-  // Dark mode toggling via next-themes
   const { theme, setTheme } = useTheme();
 
-  // Sensor data states
+  // Sensor state variables
   const [altitude, setAltitude] = useState(LAUNCH_ALT);
   const [temperature, setTemperature] = useState(25);
   const [pressure, setPressure] = useState(1013);
@@ -45,93 +74,98 @@ const GCSDashboard: React.FC = () => {
   });
   const [acceleration, setAcceleration] = useState({ x: 0, y: 0, z: 0 });
   const [airQuality, setAirQuality] = useState(10);
-  const [systemState, setSystemState] = useState(0); // For example purposes
 
-  // Telemetry chart data history – now includes pressure
+  // Chart data and relative location
   const [chartData, setChartData] = useState<
-    {
-      time: number;
-      altitude: number;
-      temperature: number;
-      humidity: number;
-      pressure: number;
-    }[]
+    { time: number; altitude: number; temperature: number; humidity: number; pressure: number }[]
   >([]);
+  const [relativeLocation, setRelativeLocation] = useState({ x: 0, y: 0, z: 0 });
+  const [thirdMetric, setThirdMetric] = useState<"humidity" | "pressure">("humidity");
 
-  // Sensor statuses (for color coding)
-  const SENSOR_STATUS = { ACTIVE: "green", ERROR: "red", STANDBY: "blue" };
-  const [status, setStatus] = useState({
-    GNSS: SENSOR_STATUS.ACTIVE,
-    Altimetry: SENSOR_STATUS.ACTIVE,
-    Pressure: SENSOR_STATUS.ACTIVE,
-    Temperature: SENSOR_STATUS.ACTIVE,
-    Gyro: SENSOR_STATUS.ACTIVE,
-    Power: SENSOR_STATUS.ACTIVE,
-    AirQuality: SENSOR_STATUS.ACTIVE,
+  // Sensor status from API
+  const [sensorStatus, setSensorStatus] = useState({
+    gnss: "ACTIVE",
+    altimetry: "ACTIVE",
+    pressure: "ACTIVE",
+    temperature: "ACTIVE",
+    gyro: "ACTIVE",
+    power: "ACTIVE",
+    airQuality: "ACTIVE",
   });
 
-  // Relative location for 3D simulation (difference from launch position)
-  const [relativeLocation, setRelativeLocation] = useState({
-    x: 0,
-    y: 0,
-    z: 0,
-  });
-
-  // State to choose third graph metric: "humidity" or "pressure"
-  const [thirdMetric, setThirdMetric] = useState<"humidity" | "pressure">(
-    "humidity"
-  );
-
-  // Simulate sensor updates every second
+  // Fetch telemetry data from API every second
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAltitude((prev) => Math.max(0, prev - 5 + (Math.random() - 0.5) * 10));
-      setTemperature((prev) => prev + (Math.random() - 0.5));
-      setPressure((prev) => 1013 + (Math.random() - 0.5) * 5);
-      setHumidity((prev) =>
-        Math.max(0, Math.min(100, prev + (Math.random() - 0.5) * 3))
-      );
-      setBattery((prev) => Math.max(0, prev - 0.2 - Math.random() * 0.2));
-      setGnssLat((prev) => prev + (Math.random() - 0.5) * 0.0001);
-      setGnssLng((prev) => prev + (Math.random() - 0.5) * 0.0001);
-      setGyroOrientation((prev) => ({
-        pitch: (prev.pitch + Math.random() * 5) % 360,
-        yaw: (prev.yaw + Math.random() * 5) % 360,
-        roll: (prev.roll + Math.random() * 5) % 360,
-      }));
-      setAcceleration(() => ({
-        x: (Math.random() - 0.5) * 2,
-        y: (Math.random() - 0.5) * 2,
-        z: (Math.random() - 0.5) * 2,
-      }));
-      setAirQuality((prev) => Math.max(0, prev + (Math.random() - 0.5) * 2));
+    const fetchTelemetry = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/telemetry");
+        const data: TelemetryData = await res.json();
+        console.log("Fetched telemetry:", data);
 
-      setChartData((prevData) => [
-        ...prevData.slice(-19),
-        {
-          time: prevData.length,
-          altitude: parseFloat(altitude.toFixed(2)),
-          temperature: parseFloat(temperature.toFixed(2)),
-          humidity: parseFloat(humidity.toFixed(2)),
-          pressure: parseFloat(pressure.toFixed(2)),
-        },
-      ]);
+        // Update sensor values from API data
+        setAltitude(data.altitude);
+        setTemperature(data.temperature);
+        setPressure(data.pressure);
+        setHumidity(data.humidity);
+        setBattery(data.battery);
+        setGnssLat(data.gnss.lat);
+        setGnssLng(data.gnss.lng);
+        setGyroOrientation({
+          pitch: data.gyro.pitch,
+          yaw: data.gyro.yaw,
+          roll: data.gyro.roll,
+        });
+        setAcceleration({
+          x: data.acceleration.x,
+          y: data.acceleration.y,
+          z: data.acceleration.z,
+        });
+        setAirQuality(data.airQuality);
 
-      setRelativeLocation({
-        x: (gnssLng - LAUNCH_LNG) * 111320,
-        y: altitude - LAUNCH_ALT,
-        z: (gnssLat - LAUNCH_LAT) * 110540,
-      });
-    }, 1000);
+        // Update sensor status from API
+        setSensorStatus({
+          gnss: data.sensor_status.gnss,
+          altimetry: data.sensor_status.altimetry,
+          pressure: data.sensor_status.pressure,
+          temperature: data.sensor_status.temperature,
+          gyro: data.sensor_status.gyro,
+          power: data.sensor_status.power,
+          airQuality: data.sensor_status.airQuality,
+        });
 
+        // Append new data point to chart data (limit to 20 entries)
+        setChartData((prevData) => [
+          ...prevData.slice(-19),
+          {
+            time: prevData.length,
+            altitude: data.altitude,
+            temperature: data.temperature,
+            humidity: data.humidity,
+            pressure: data.pressure,
+          },
+        ]);
+
+        // Update relative location (rough conversion from degrees to meters)
+        setRelativeLocation({
+          x: (data.gnss.lng - LAUNCH_LNG) * 111320,
+          y: data.altitude - LAUNCH_ALT,
+          z: (data.gnss.lat - LAUNCH_LAT) * 110540,
+        });
+      } catch (error) {
+        console.error("Error fetching telemetry:", error);
+      }
+    };
+
+    fetchTelemetry();
+    const interval = setInterval(fetchTelemetry, 1000);
     return () => clearInterval(interval);
-  }, [gnssLng, gnssLat, altitude, temperature, humidity, pressure]);
+  }, []);
 
   const handleSendCommand = (command: string) => {
-    console.log("Command sent to client:", command);
+    console.log("Command sent:", command);
   };
 
   const handleCalibrate = () => {
+    // Optionally, you could send a calibration command to the API.
     setAltitude(LAUNCH_ALT);
     setTemperature(25);
     setPressure(1013);
@@ -162,9 +196,9 @@ const GCSDashboard: React.FC = () => {
         </div>
       </header>
 
-      {/* Modified Grid Layout: 2 columns with auto-sized rows */}
+      {/* Grid with auto-sized rows */}
       <div className="grid grid-cols-2 gap-1 auto-rows-auto">
-        {/* SENSOR READOUTS (Row 1, Col 1) */}
+        {/* Sensor Readouts */}
         <div className="overflow-auto p-1">
           <Card>
             <CardHeader>
@@ -172,65 +206,104 @@ const GCSDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-2 text-sm">
+                {/* GNSS */}
                 <div>
                   <p>
                     <strong>GNSS</strong>{" "}
-                    <span style={{ color: status.GNSS }}>●</span>
+                    <span style={{ color: getColorForStatus(sensorStatus.gnss) }}>
+                      ●
+                    </span>{" "}
+                    <span className="ml-1 text-xs">{sensorStatus.gnss}</span>
                   </p>
                   <p>Lat: {gnssLat.toFixed(6)}°</p>
                   <p>Lng: {gnssLng.toFixed(6)}°</p>
                 </div>
+                {/* Altimetry */}
                 <div>
                   <p>
                     <strong>Altimetry</strong>{" "}
-                    <span style={{ color: status.Altimetry }}>●</span>
+                    <span
+                      style={{ color: getColorForStatus(sensorStatus.altimetry) }}
+                    >
+                      ●
+                    </span>{" "}
+                    <span className="ml-1 text-xs">{sensorStatus.altimetry}</span>
                   </p>
                   <p>{altitude.toFixed(2)} m</p>
                 </div>
+                {/* Pressure */}
                 <div>
                   <p>
                     <strong>Pressure</strong>{" "}
-                    <span style={{ color: status.Pressure }}>●</span>
+                    <span
+                      style={{ color: getColorForStatus(sensorStatus.pressure) }}
+                    >
+                      ●
+                    </span>{" "}
+                    <span className="ml-1 text-xs">{sensorStatus.pressure}</span>
                   </p>
                   <p>{pressure.toFixed(2)} hPa</p>
                 </div>
+                {/* Temperature */}
                 <div>
                   <p>
                     <strong>Temperature</strong>{" "}
-                    <span style={{ color: status.Temperature }}>●</span>
+                    <span
+                      style={{ color: getColorForStatus(sensorStatus.temperature) }}
+                    >
+                      ●
+                    </span>{" "}
+                    <span className="ml-1 text-xs">
+                      {sensorStatus.temperature}
+                    </span>
                   </p>
                   <p>{temperature.toFixed(2)} °C</p>
                 </div>
+                {/* Gyro / Accel */}
                 <div>
                   <p>
                     <strong>Gyro / Accel</strong>{" "}
-                    <span style={{ color: status.Gyro }}>●</span>
+                    <span style={{ color: getColorForStatus(sensorStatus.gyro) }}>
+                      ●
+                    </span>{" "}
+                    <span className="ml-1 text-xs">{sensorStatus.gyro}</span>
                   </p>
                   <p>Pitch: {gyroOrientation.pitch.toFixed(2)}°</p>
                   <p>Yaw: {gyroOrientation.yaw.toFixed(2)}°</p>
                   <p>Roll: {gyroOrientation.roll.toFixed(2)}°</p>
                   <p>
-                    Accel: {acceleration.x.toFixed(2)},{" "}
-                    {acceleration.y.toFixed(2)}, {acceleration.z.toFixed(2)}
+                    Accel: {acceleration.x.toFixed(2)}, {acceleration.y.toFixed(2)}, {acceleration.z.toFixed(2)}
                   </p>
                 </div>
+                {/* Power */}
                 <div>
                   <p>
                     <strong>Power</strong>{" "}
-                    <span style={{ color: status.Power }}>●</span>
+                    <span style={{ color: getColorForStatus(sensorStatus.power) }}>
+                      ●
+                    </span>{" "}
+                    <span className="ml-1 text-xs">{sensorStatus.power}</span>
                   </p>
                   <p>{battery.toFixed(2)}%</p>
                 </div>
+                {/* Air Quality */}
                 <div>
                   <p>
                     <strong>Air Quality (PM2.5)</strong>{" "}
-                    <span style={{ color: status.AirQuality }}>●</span>
+                    <span
+                      style={{ color: getColorForStatus(sensorStatus.airQuality) }}
+                    >
+                      ●
+                    </span>{" "}
+                    <span className="ml-1 text-xs">
+                      {sensorStatus.airQuality}
+                    </span>
                   </p>
                   <p>{airQuality.toFixed(2)} µg/m³</p>
                 </div>
               </div>
               <div className="mt-1 text-xs font-bold">
-                System State: BOOT (simulated)
+                System State: {0 /* or from API if available */}
               </div>
               <div className="mt-1">
                 <Button onClick={handleCalibrate} size="sm">
@@ -241,7 +314,7 @@ const GCSDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* TELEMETRY CHARTS (Row 1, Col 2) */}
+        {/* Telemetry Charts */}
         <div className="overflow-auto p-1">
           <Card>
             <CardHeader>
@@ -251,14 +324,14 @@ const GCSDashboard: React.FC = () => {
               <div className="flex justify-end mb-2 space-x-2">
                 <Button
                   size="sm"
-                  variant={thirdMetric === "humidity" ? "default" : "outline"}
+                  variant={thirdMetric === "humidity" ? "outline" : "default"}
                   onClick={() => setThirdMetric("humidity")}
                 >
                   Humidity
                 </Button>
                 <Button
                   size="sm"
-                  variant={thirdMetric === "pressure" ? "default" : "outline"}
+                  variant={thirdMetric === "pressure" ? "outline" : "default"}
                   onClick={() => setThirdMetric("pressure")}
                 >
                   Pressure
@@ -272,26 +345,10 @@ const GCSDashboard: React.FC = () => {
                   </h2>
                   <ResponsiveContainer width="100%" height={100}>
                     <LineChart data={chartData}>
-                      <XAxis
-                        dataKey="time"
-                        tick={{ fontSize: 10 }}
-                        axisLine={{ stroke: "#ccc" }}
-                        tickLine={{ stroke: "#ccc" }}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        axisLine={{ stroke: "#ccc" }}
-                        tickLine={{ stroke: "#ccc" }}
-                        domain={[0, 1100]}
-                      />
+                      <XAxis dataKey="time" tick={{ fontSize: 10 }} axisLine={{ stroke: "#ccc" }} tickLine={{ stroke: "#ccc" }} />
+                      <YAxis tick={{ fontSize: 10 }} axisLine={{ stroke: "#ccc" }} tickLine={{ stroke: "#ccc" }} domain={[0, 1100]} />
                       <Tooltip wrapperStyle={{ fontSize: "10px" }} />
-                      <Line
-                        type="monotone"
-                        dataKey="altitude"
-                        stroke="#8884d8"
-                        strokeWidth={2}
-                        dot={false}
-                      />
+                      <Line type="monotone" dataKey="altitude" stroke="#8884d8" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -302,26 +359,10 @@ const GCSDashboard: React.FC = () => {
                   </h2>
                   <ResponsiveContainer width="100%" height={100}>
                     <LineChart data={chartData}>
-                      <XAxis
-                        dataKey="time"
-                        tick={{ fontSize: 10 }}
-                        axisLine={{ stroke: "#ccc" }}
-                        tickLine={{ stroke: "#ccc" }}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        axisLine={{ stroke: "#ccc" }}
-                        tickLine={{ stroke: "#ccc" }}
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                      />
+                      <XAxis dataKey="time" tick={{ fontSize: 10 }} axisLine={{ stroke: "#ccc" }} tickLine={{ stroke: "#ccc" }} />
+                      <YAxis tick={{ fontSize: 10 }} axisLine={{ stroke: "#ccc" }} tickLine={{ stroke: "#ccc" }} domain={["dataMin - 5", "dataMax + 5"]} />
                       <Tooltip wrapperStyle={{ fontSize: "10px" }} />
-                      <Line
-                        type="monotone"
-                        dataKey="temperature"
-                        stroke="#82ca9d"
-                        strokeWidth={2}
-                        dot={false}
-                      />
+                      <Line type="monotone" dataKey="temperature" stroke="#82ca9d" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -334,28 +375,15 @@ const GCSDashboard: React.FC = () => {
                   </h2>
                   <ResponsiveContainer width="100%" height={100}>
                     <LineChart data={chartData}>
-                      <XAxis
-                        dataKey="time"
-                        tick={{ fontSize: 10 }}
-                        axisLine={{ stroke: "#ccc" }}
-                        tickLine={{ stroke: "#ccc" }}
-                      />
+                      <XAxis dataKey="time" tick={{ fontSize: 10 }} axisLine={{ stroke: "#ccc" }} tickLine={{ stroke: "#ccc" }} />
                       <YAxis
                         tick={{ fontSize: 10 }}
                         axisLine={{ stroke: "#ccc" }}
                         tickLine={{ stroke: "#ccc" }}
-                        domain={
-                          thirdMetric === "humidity" ? [0, 100] : [1000, 1020]
-                        }
+                        domain={thirdMetric === "humidity" ? [0, 100] : [1000, 1020]}
                       />
                       <Tooltip wrapperStyle={{ fontSize: "10px" }} />
-                      <Line
-                        type="monotone"
-                        dataKey={thirdMetric}
-                        stroke={thirdMetric === "humidity" ? "#ffc658" : "#ff7300"}
-                        strokeWidth={2}
-                        dot={false}
-                      />
+                      <Line type="monotone" dataKey={thirdMetric} stroke={thirdMetric === "humidity" ? "#ffc658" : "#ff7300"} strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -364,7 +392,7 @@ const GCSDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* 3D SIMULATION (Row 2, Col 1) */}
+        {/* 3D Simulation */}
         <div className="overflow-auto p-1">
           <Card>
             <CardHeader>
@@ -375,7 +403,7 @@ const GCSDashboard: React.FC = () => {
                 <ambientLight intensity={0.5} />
                 <pointLight position={[10, 10, 10]} />
                 <OrbitControls />
-                {/* Only show orientation; position fixed at origin */}
+                {/* Only show orientation; fixed position */}
                 <CanSat
                   position={[0, 0, 0]}
                   rotation={[
@@ -385,12 +413,13 @@ const GCSDashboard: React.FC = () => {
                   ]}
                 />
                 <gridHelper args={[1, 1]} />
+                <axesHelper args={[2]} />
               </Canvas>
             </CardContent>
           </Card>
         </div>
 
-        {/* 3D POSITION GRAPH (Row 2, Col 2) */}
+        {/* 3D Position Graph */}
         <div className="overflow-auto p-1">
           <Card>
             <CardHeader>
@@ -409,7 +438,7 @@ const GCSDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Terminal Section (spanning full width) */}
+      {/* Terminal Section */}
       <div className="mt-1">
         <Card>
           <CardHeader>
