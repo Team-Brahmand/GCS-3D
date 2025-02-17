@@ -7,6 +7,7 @@ two main components
 
 ## Things to do 
 - [ ] Componentize the dashboard
+- [ ] Model replace ([3d convert] https://github.com/pmndrs/gltfjsx)
 - [ ] Serial read
 - [ ] CSV write
 - [ ] Faster updates
