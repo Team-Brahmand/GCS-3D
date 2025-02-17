@@ -17,5 +17,6 @@ two main components
 ## Images
 ### Dark Mode
 <img width="1710" alt="GCS Dark" src="https://github.com/user-attachments/assets/12706256-09b5-48a6-a63b-cdd618ae66fc" />
+
 ### Lite Mode
 <img width="1710" alt="GCS Lite" src="https://github.com/user-attachments/assets/6cccb27f-abf1-4b31-aeb4-7774b10de7e4" />
