@@ -1,5 +1,8 @@
-''' Telemtry 
-command to run:
+''' Telemetry API with Random Data Generation
+This serves random telemetry data for testing and development.
+For real serial data from hardware, use parser.py instead.
+
+Command to run:
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8001
 '''
 from fastapi import FastAPI, UploadFile, File, HTTPException

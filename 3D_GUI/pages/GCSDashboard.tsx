@@ -102,7 +102,7 @@ const GCSDashboard: React.FC = () => {
   useEffect(() => {
     const fetchTelemetry = async () => {
       try {
-        const res = await fetch("http://localhost:8000/telemetry");
+        const res = await fetch("http://localhost:8002/telemetry");
         const data: TelemetryData = await res.json();
         console.log("Fetched telemetry:", data);
 
@@ -169,7 +169,7 @@ const GCSDashboard: React.FC = () => {
     console.log("Command sent:", command);
     
     try {
-      const response = await fetch("http://localhost:8000/command", {
+      const response = await fetch("http://localhost:8002/command", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -209,7 +209,7 @@ const GCSDashboard: React.FC = () => {
   useEffect(() => {
     const fetchDataMode = async () => {
       try {
-        const response = await fetch("http://localhost:8000/config/data-mode");
+        const response = await fetch("http://localhost:8002/config/data-mode");
         if (response.ok) {
           const result = await response.json();
           setDataMode(result.mode);
@@ -227,7 +227,7 @@ const GCSDashboard: React.FC = () => {
 
   const handleModeSwitch = async (newMode: string) => {
     try {
-      const response = await fetch("http://localhost:8000/config/data-mode", {
+      const response = await fetch("http://localhost:8002/config/data-mode", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -243,7 +243,7 @@ const GCSDashboard: React.FC = () => {
         console.log("Mode switched to:", result.mode);
         
         // Also refresh the data mode status
-        const statusResponse = await fetch("http://localhost:8000/config/data-mode");
+        const statusResponse = await fetch("http://localhost:8002/config/data-mode");
         if (statusResponse.ok) {
           const statusResult = await statusResponse.json();
           setCsvLoaded(statusResult.csv_loaded);
