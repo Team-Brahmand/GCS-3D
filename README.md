@@ -1,10 +1,13 @@
 # GCS - By VA
-
-two main components
+- OLD VERSION (Don't use)
+- new version is not public due to reasons
+  
+## Three main components
 - Next js based 3d dashboard
 - Fast API python program (reads from serial, saves data to csv and exposes an API endpoint for dashboard)
+- ESP32 LoRa / Xbee parser
 
-## Things to do (Done in a next version, <Not public due to reasons>)
+## Things to do 
 - [x] Componentize the dashboard
 - [x] Model replace ([3d convert] https://github.com/pmndrs/gltfjsx)
 - [x] Serial read
