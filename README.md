@@ -1,6 +1,6 @@
 # GCS - By VA
-- OLD VERSION (Don't use)
-- new version is not public due to reasons
+# OLD VERSION (Don't use)
+- new version is not public due to reasons 🙃
   
 ## Three main components
 - Next js based 3d dashboard
