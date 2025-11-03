@@ -4,7 +4,7 @@ two main components
 - Next js based 3d dashboard
 - Fast API python program (reads from serial, saves data to csv and exposes an API endpoint for dashboard)
 
-## Things to do (Done in a next version, <Not public due to reasons>
+## Things to do (Done in a next version, <Not public due to reasons>)
 - [x] Componentize the dashboard
 - [x] Model replace ([3d convert] https://github.com/pmndrs/gltfjsx)
 - [x] Serial read
